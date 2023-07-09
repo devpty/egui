@@ -294,7 +294,7 @@ impl State {
 											// We need to ignore these characters that are side-effects of commands.
 											let is_mac_cmd = cfg!(target_os = "macos")
 													&& (self.egui_input.modifiers.ctrl || self.egui_input.modifiers.mac_cmd);
-			
+
 											consumed |= if is_printable_char(ch) && !is_mac_cmd {
 													self.egui_input
 															.events
@@ -355,14 +355,16 @@ impl State {
                 }
             }
             WindowEvent::ModifiersChanged(state) => {
-                self.egui_input.modifiers.alt = state.alt_key();
-                self.egui_input.modifiers.ctrl = state.control_key();
-                self.egui_input.modifiers.shift = state.shift_key();
-                self.egui_input.modifiers.mac_cmd = cfg!(target_os = "macos") && state.super_key();
+                use winit::keyboard::ModifiersState;
+                let state = state.state();
+                self.egui_input.modifiers.alt = state.contains(ModifiersState::ALT);
+                self.egui_input.modifiers.ctrl = state.contains(ModifiersState::CONTROL);
+                self.egui_input.modifiers.shift = state.contains(ModifiersState::SHIFT);
+                self.egui_input.modifiers.mac_cmd = cfg!(target_os = "macos") && state.contains(ModifiersState::SUPER);
                 self.egui_input.modifiers.command = if cfg!(target_os = "macos") {
-                    state.super_key()
+                    state.contains(ModifiersState::SUPER)
                 } else {
-                    state.control_key()
+                    state.contains(ModifiersState::CONTROL)
                 };
                 EventResponse {
                     repaint: true,
@@ -665,7 +667,7 @@ impl State {
         }
 
         if let Some(egui::Pos2 { x, y }) = text_cursor_pos {
-            window.set_ime_position(winit::dpi::LogicalPosition { x, y });
+            window.set_ime_cursor_area(winit::dpi::LogicalPosition { x, y }, winit::dpi::LogicalSize { width: 0, height: 0 });
         }
 
         #[cfg(feature = "accesskit")]
@@ -750,8 +752,8 @@ fn translate_mouse_button(button: winit::event::MouseButton) -> Option<egui::Poi
         winit::event::MouseButton::Left => Some(egui::PointerButton::Primary),
         winit::event::MouseButton::Right => Some(egui::PointerButton::Secondary),
         winit::event::MouseButton::Middle => Some(egui::PointerButton::Middle),
-        winit::event::MouseButton::Other(1) => Some(egui::PointerButton::Extra1),
-        winit::event::MouseButton::Other(2) => Some(egui::PointerButton::Extra2),
+        winit::event::MouseButton::Back => Some(egui::PointerButton::Extra1),
+        winit::event::MouseButton::Forward => Some(egui::PointerButton::Extra2),
         winit::event::MouseButton::Other(_) => None,
     }
 }
